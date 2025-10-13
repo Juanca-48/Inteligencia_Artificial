@@ -67,6 +67,8 @@
   <ItemGroup>
     <Compile Include="Assets\scripts\Player.cs" />
     <Compile Include="Assets\scripts\CameraFollow.cs" />
+    <Compile Include="Assets\scripts\Obstaculo.cs" />
+    <Compile Include="Assets\scripts\Meta.cs" />
     <Compile Include="Assets\scripts\PlayerRotationAnimation.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -4,8 +4,8 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
-    public float moveSpeed = 1.5f;
-    public float maxJumpHeight = 2f;
+    public float moveSpeed = 0.5f;
+    public float maxJumpHeight = 1.5f;
     
     private bool isGrounded = false;
     private Rigidbody2D rb;
