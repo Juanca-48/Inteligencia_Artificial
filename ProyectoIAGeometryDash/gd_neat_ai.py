@@ -46,8 +46,8 @@ from enum import Enum
 LOG_PATH = r"D:\SteamLibrary\steamapps\common\Geometry Dash\geode\logs\gd_ai_log_temp.log"
 GENERATIONS = 300
 
-IMMUNITY_WINDOW = 0.4
-STUCK_THRESHOLD = 180
+IMMUNITY_WINDOW = 0.2
+STUCK_THRESHOLD = 150
 READ_RETRY_DELAY = 0.0005
 
 # ============================================================================
@@ -150,10 +150,15 @@ class GameStateParser:
 class LevelSession:
     """Maneja un intento de nivel con handshake y tracking."""
     
+    attempt_counter = 0  # Contador global de intentos
+    
     def __init__(self, reader: SafeLogReader, parser: GameStateParser, genome_id: int):
         self.reader = reader
         self.parser = parser
         self.genome_id = genome_id
+        
+        LevelSession.attempt_counter += 1
+        self.attempt_id = LevelSession.attempt_counter
         
         self.start_time = None
         self.start_x = None
@@ -161,45 +166,25 @@ class LevelSession:
         self.frames_stuck = 0
         
     def wait_for_reset(self) -> bool:
-        """Espera a que el nivel reinicie (detecta DEATH → X < 100)."""
+        """Espera spawn inmediato - sin detectar DEATH."""
         
-        death_detected = False
-        spawn_detected = False
-        
-        start_wait = time.time()
-        while not death_detected:
-            if time.time() - start_wait > 2.0:
-                death_detected = True
-                break
-            
-            raw = self.reader.read_raw()
-            if raw:
-                event, state = self.parser.parse(raw)
-                if event == EventType.DEATH:
-                    death_detected = True
-                    break
-            
-            time.sleep(0.0005)
-        
-        time.sleep(0.15)
-        
-        while not spawn_detected:
+        # Solo esperar a que X sea pequeño (jugador en spawn)
+        while True:
             raw = self.reader.read_raw()
             if raw:
                 event, state = self.parser.parse(raw)
                 
                 if event == EventType.STATE and state:
-                    if state.x <= 100:
-                        spawn_detected = True
-                        break
-            
-            time.sleep(0.0005)
+                    if state.x <= 150:
+                        return True
         
         return True
     
     def run(self, net: neat.nn.FeedForwardNetwork) -> float:
         """Ejecuta un intento completo del nivel."""
         self.start_time = time.time()
+        death_seen = False
+        valid_attempt = False
         
         while True:
             raw = self.reader.read_raw()
@@ -212,13 +197,19 @@ class LevelSession:
             if event == EventType.DEATH:
                 if elapsed < IMMUNITY_WINDOW:
                     continue
+                death_seen = True
                 break
             
             if event == EventType.WIN:
                 self.max_x += 50000
+                valid_attempt = True
                 break
             
             if event == EventType.STATE and state:
+                # Marcar que empezamos a recibir datos válidos
+                if not valid_attempt and state.x > 10:
+                    valid_attempt = True
+                
                 if self.start_x is None:
                     self.start_x = state.x
                     self.max_x = state.x
@@ -230,6 +221,7 @@ class LevelSession:
                     self.frames_stuck += 1
                 
                 if self.frames_stuck > STUCK_THRESHOLD:
+                    valid_attempt = True
                     break
                 
                 inputs = self._build_inputs(state)
@@ -242,14 +234,18 @@ class LevelSession:
         
         keyboard.release('space')
         
-        if self.start_x is None:
+        # Solo esperar si fue un intento válido y murió
+        if death_seen and valid_attempt:
+            time.sleep(0.08)
+        
+        if self.start_x is None or not valid_attempt:
             return 0.0
         
         distance = self.max_x - self.start_x
         percentage = min((distance / 10000.0) * 100, 100)
         fitness = (distance * distance) / 100.0
         
-        sys.stdout.write(f"D:{distance:.0f}({percentage:.1f}%) F:{fitness:.0f} ")
+        sys.stdout.write(f"D:{distance:.0f}({percentage:.1f}%) ")
         sys.stdout.flush()
         
         return fitness
@@ -281,11 +277,17 @@ def evaluate_genome(genome_id: int, genome: neat.DefaultGenome,
     net = neat.nn.FeedForwardNetwork.create(genome, config)
     reader = SafeLogReader(LOG_PATH)
     parser = GameStateParser()
-    session = LevelSession(reader, parser, genome_id)
     
+    # Reiniciar nivel
     keyboard.release('space')
     keyboard.press_and_release('r')
-    time.sleep(0.08)
+    time.sleep(0.05)
+    
+    # Limpiar caché del reader para evitar datos viejos
+    reader._last_content = ""
+    reader._last_mtime = 0.0
+    
+    session = LevelSession(reader, parser, genome_id)
     
     if not session.wait_for_reset():
         return 0.0

@@ -1,0 +1,99 @@
+[NEAT]
+fitness_criterion         = max
+# Fitness threshold MUCHO más alto - un nivel típico de GD tiene ~10,000-30,000 unidades
+# Con la fórmula (distance²)/100, necesitamos:
+# - Para 50% del nivel (~5000 unidades): (5000²)/100 = 250,000,000
+# - Para nivel completo (~10000 unidades): (10000²)/100 = 10,000,000,000
+# Establecer en 10 billones para que nunca termine prematuramente
+fitness_threshold         = 10000000000
+pop_size                  = 50
+reset_on_extinction       = True
+no_fitness_termination    = False
+
+[DefaultGenome]
+# --- Activación Corregida ---
+activation_default           = tanh
+activation_mutate_rate       = 0.15
+activation_options           = tanh sigmoid relu
+
+aggregation_default          = sum
+aggregation_mutate_rate      = 0.0
+aggregation_options          = sum
+
+# --- Bias (Sesgo) ---
+bias_init_mean               = 0.0
+bias_init_stdev              = 1.0
+bias_init_type               = gaussian
+bias_max_value               = 30.0
+bias_min_value               = -30.0
+bias_mutate_power            = 0.5
+bias_mutate_rate             = 0.7
+bias_replace_rate            = 0.1
+
+# --- Response ---
+response_init_mean           = 1.0
+response_init_stdev          = 0.0
+response_init_type           = gaussian
+response_max_value           = 30.0
+response_min_value           = -30.0
+response_mutate_power        = 0.0
+response_mutate_rate         = 0.0
+response_replace_rate        = 0.0
+
+# --- Pesos (Weights) - Alta Mutación ---
+weight_init_mean             = 0.0
+weight_init_stdev            = 1.5
+weight_init_type             = gaussian
+weight_max_value             = 30.0
+weight_min_value             = -30.0
+weight_mutate_power          = 1.5
+weight_mutate_rate           = 0.9
+weight_replace_rate          = 0.2
+
+# --- Conexiones ---
+conn_init_mean               = 0.0
+conn_init_stdev              = 1.5
+conn_init_type               = gaussian
+conn_max_value               = 30.0
+conn_min_value               = -30.0
+conn_mutate_power            = 1.0
+conn_mutate_rate             = 0.85
+conn_replace_rate            = 0.15
+conn_add_prob                = 0.6
+conn_delete_prob             = 0.2
+
+# --- Nodos ---
+node_add_prob                = 0.3
+node_delete_prob             = 0.1
+
+# --- Estructura de Red ---
+feed_forward                 = True
+initial_connection           = full
+num_hidden                   = 0
+num_inputs                   = 19
+num_outputs                  = 1
+enabled_default              = True
+enabled_mutate_rate          = 0.05
+enabled_rate_to_true_add     = 0.03
+enabled_rate_to_false_add    = 0.03
+
+# --- Mutación Estructural ---
+single_structural_mutation   = False
+structural_mutation_surer    = default
+
+# --- Compatibilidad ---
+compatibility_disjoint_coefficient = 1.0
+compatibility_weight_coefficient   = 0.5
+
+[DefaultSpeciesSet]
+compatibility_threshold = 3.5
+
+[DefaultStagnation]
+species_fitness_func = max
+max_stagnation       = 15
+species_elitism      = 2
+
+[DefaultReproduction]
+elitism            = 2
+survival_threshold = 0.3
+min_species_size   = 2
